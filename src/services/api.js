@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Troque pelo IP da sua máquina ao rodar no dispositivo físico
 // Ex: 'http://192.168.0.10:3000'
-const BASE_URL = 'http://localhost:3333';
+const BASE_URL = 'http://192.168.0.114:3333';
 
 const api = axios.create({
   baseURL: BASE_URL,
