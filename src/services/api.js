@@ -1,19 +1,13 @@
 import axios from 'axios';
 
-// Troque pelo IP da sua máquina ao rodar no dispositivo físico
-// Ex: 'http://192.168.0.10:3000'
 const BASE_URL = 'http://192.168.0.114:3333';
 
 const api = axios.create({
   baseURL: BASE_URL,
-  timeout: 8000,
-  headers: { 'Content-Type': 'application/json' },
 });
 
-export const taskService = {
-  getAll: () => api.get('/tasks').then((r) => r.data),
-  getById: (id) => api.get(`/tasks/${id}`).then((r) => r.data),
-  create: (data) => api.post('/tasks', data).then((r) => r.data),
-  update: (id, data) => api.put(`/tasks/${id}`, data).then((r) => r.data),
-  remove: (id) => api.delete(`/tasks/${id}`).then((r) => r.data),
-};
+export const buscarTarefas = () => api.get('/tasks').then(res => res.data);
+export const buscarTarefa = (id) => api.get(`/tasks/${id}`).then(res => res.data);
+export const criarTarefa = (dados) => api.post('/tasks', dados).then(res => res.data);
+export const atualizarTarefa = (id, dados) => api.put(`/tasks/${id}`, dados).then(res => res.data);
+export const deletarTarefa = (id) => api.delete(`/tasks/${id}`).then(res => res.data);

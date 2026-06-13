@@ -1,16 +1,23 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-const STATUS_CONFIG = {
-  pending:     { label: 'Pendente',    color: '#F59E0B', icon: 'time-outline' },
-  in_progress: { label: 'Em andamento', color: '#3B82F6', icon: 'reload-outline' },
-  done:        { label: 'Concluída',   color: '#10B981', icon: 'checkmark-circle-outline' },
+const statusLabel = {
+  pending: 'Pendente',
+  in_progress: 'Em andamento',
+  done: 'Concluída',
+};
+
+const statusColor = {
+  pending: '#F59E0B',
+  in_progress: '#3B82F6',
+  done: '#10B981',
 };
 
 export default function TaskCard({ task, onEdit, onDelete }) {
-  const cfg = STATUS_CONFIG[task.status] ?? STATUS_CONFIG.pending;
+  const cor = statusColor[task.status] || '#F59E0B';
+  const label = statusLabel[task.status] || 'Pendente';
 
-  function confirmDelete() {
+  function confirmarDelete() {
     Alert.alert('Remover tarefa', `Deseja remover "${task.title}"?`, [
       { text: 'Cancelar', style: 'cancel' },
       { text: 'Remover', style: 'destructive', onPress: () => onDelete(task.id) },
@@ -20,21 +27,20 @@ export default function TaskCard({ task, onEdit, onDelete }) {
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <View style={[styles.badge, { backgroundColor: cfg.color + '22' }]}>
-          <Ionicons name={cfg.icon} size={13} color={cfg.color} />
-          <Text style={[styles.badgeText, { color: cfg.color }]}>{cfg.label}</Text>
+        <View style={[styles.badge, { backgroundColor: cor + '22' }]}>
+          <Text style={[styles.badgeText, { color: cor }]}>{label}</Text>
         </View>
-        <View style={styles.actions}>
-          <TouchableOpacity onPress={() => onEdit(task)} style={styles.actionBtn}>
+        <View style={styles.acoes}>
+          <TouchableOpacity onPress={() => onEdit(task)} style={styles.btnAcao}>
             <Ionicons name="pencil-outline" size={18} color="#6C63FF" />
           </TouchableOpacity>
-          <TouchableOpacity onPress={confirmDelete} style={styles.actionBtn}>
+          <TouchableOpacity onPress={confirmarDelete} style={styles.btnAcao}>
             <Ionicons name="trash-outline" size={18} color="#EF4444" />
           </TouchableOpacity>
         </View>
       </View>
-      <Text style={styles.title}>{task.title}</Text>
-      {!!task.description && <Text style={styles.desc}>{task.description}</Text>}
+      <Text style={styles.titulo}>{task.title}</Text>
+      {!!task.description && <Text style={styles.descricao}>{task.description}</Text>}
     </View>
   );
 }
@@ -58,16 +64,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 20,
   },
   badgeText: { fontSize: 12, fontWeight: '600' },
-  actions: { flexDirection: 'row', gap: 8 },
-  actionBtn: { padding: 4 },
-  title: { fontSize: 16, fontWeight: '700', color: '#1F2937', marginBottom: 4 },
-  desc: { fontSize: 13, color: '#6B7280', lineHeight: 18 },
+  acoes: { flexDirection: 'row', gap: 8 },
+  btnAcao: { padding: 4 },
+  titulo: { fontSize: 16, fontWeight: '700', color: '#1F2937', marginBottom: 4 },
+  descricao: { fontSize: 13, color: '#6B7280' },
 });

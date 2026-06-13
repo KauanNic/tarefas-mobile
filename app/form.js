@@ -1,5 +1,5 @@
-import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
-import { useEffect, useLayoutEffect, useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -11,71 +11,52 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { taskService } from '../src/services/api';
+import { atualizarTarefa, buscarTarefa, criarTarefa } from '../src/services/api';
 
-const STATUSES = [
-  { value: 'pending',     label: 'Pendente' },
-  { value: 'in_progress', label: 'Em andamento' },
-  { value: 'done',        label: 'Concluída' },
+const statusOpcoes = [
+  { valor: 'pending', label: 'Pendente' },
+  { valor: 'in_progress', label: 'Em andamento' },
+  { valor: 'done', label: 'Concluída' },
 ];
 
 export default function FormScreen() {
   const { id } = useLocalSearchParams();
-  const isEdit = !!id;
   const router = useRouter();
-  const navigation = useNavigation();
 
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
+  const [titulo, setTitulo] = useState('');
+  const [descricao, setDescricao] = useState('');
   const [status, setStatus] = useState('pending');
-  const [saving, setSaving] = useState(false);
-  const [loadingTask, setLoadingTask] = useState(isEdit);
-  const [error, setError] = useState(null);
-
-  useLayoutEffect(() => {
-    navigation.setOptions({ title: isEdit ? 'Editar Tarefa' : 'Nova Tarefa' });
-  }, [isEdit, navigation]);
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState('');
 
   useEffect(() => {
-    if (!isEdit) return;
-    taskService.getById(id)
-      .then((task) => {
-        setTitle(task.title);
-        setDescription(task.description ?? '');
-        setStatus(task.status);
-      })
-      .catch(() => setError('Não foi possível carregar a tarefa.'))
-      .finally(() => setLoadingTask(false));
-  }, [id, isEdit]);
+    if (!id) return;
+    buscarTarefa(id).then(tarefa => {
+      setTitulo(tarefa.title);
+      setDescricao(tarefa.description || '');
+      setStatus(tarefa.status);
+    });
+  }, [id]);
 
-  async function handleSubmit() {
-    if (!title.trim()) {
-      setError('O título é obrigatório.');
+  async function salvar() {
+    if (!titulo.trim()) {
+      setErro('O título é obrigatório.');
       return;
     }
-    setSaving(true);
-    setError(null);
+    setSalvando(true);
+    setErro('');
     try {
-      const payload = { title: title.trim(), description: description.trim() || null, status };
-      if (isEdit) {
-        await taskService.update(id, payload);
+      const dados = { title: titulo, description: descricao, status };
+      if (id) {
+        await atualizarTarefa(id, dados);
       } else {
-        await taskService.create(payload);
+        await criarTarefa(dados);
       }
       router.back();
-    } catch {
-      setError('Erro ao salvar tarefa. Verifique sua conexão.');
-    } finally {
-      setSaving(false);
+    } catch (e) {
+      setErro('Erro ao salvar. Tente novamente.');
+      setSalvando(false);
     }
-  }
-
-  if (loadingTask) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#6C63FF" />
-      </View>
-    );
   }
 
   return (
@@ -83,53 +64,46 @@ export default function FormScreen() {
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        {error && <Text style={styles.errorText}>{error}</Text>}
+      <ScrollView style={styles.container} contentContainerStyle={styles.conteudo}>
+        {erro !== '' && <Text style={styles.erro}>{erro}</Text>}
 
         <Text style={styles.label}>Título *</Text>
         <TextInput
           style={styles.input}
-          placeholder="Ex: Estudar React Native"
-          value={title}
-          onChangeText={setTitle}
-          maxLength={100}
+          placeholder="Ex: Estudar para a prova"
+          value={titulo}
+          onChangeText={setTitulo}
         />
 
         <Text style={styles.label}>Descrição</Text>
         <TextInput
-          style={[styles.input, styles.multiline]}
-          placeholder="Detalhes opcionais..."
-          value={description}
-          onChangeText={setDescription}
+          style={[styles.input, styles.inputGrande]}
+          placeholder="Detalhes da tarefa..."
+          value={descricao}
+          onChangeText={setDescricao}
           multiline
-          numberOfLines={4}
           textAlignVertical="top"
         />
 
         <Text style={styles.label}>Status</Text>
         <View style={styles.statusGroup}>
-          {STATUSES.map((s) => (
+          {statusOpcoes.map(op => (
             <TouchableOpacity
-              key={s.value}
-              style={[styles.statusBtn, status === s.value && styles.statusBtnActive]}
-              onPress={() => setStatus(s.value)}
+              key={op.valor}
+              style={[styles.statusBtn, status === op.valor && styles.statusBtnAtivo]}
+              onPress={() => setStatus(op.valor)}
             >
-              <Text style={[styles.statusBtnText, status === s.value && styles.statusBtnTextActive]}>
-                {s.label}
+              <Text style={[styles.statusBtnTexto, status === op.valor && styles.statusBtnTextoAtivo]}>
+                {op.label}
               </Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        <TouchableOpacity
-          style={[styles.submitBtn, saving && styles.submitBtnDisabled]}
-          onPress={handleSubmit}
-          disabled={saving}
-          activeOpacity={0.8}
-        >
-          {saving
+        <TouchableOpacity style={styles.btnSalvar} onPress={salvar} disabled={salvando}>
+          {salvando
             ? <ActivityIndicator color="#fff" />
-            : <Text style={styles.submitBtnText}>{isEdit ? 'Salvar alterações' : 'Criar tarefa'}</Text>
+            : <Text style={styles.btnSalvarTexto}>{id ? 'Salvar alterações' : 'Criar tarefa'}</Text>
           }
         </TouchableOpacity>
       </ScrollView>
@@ -139,15 +113,13 @@ export default function FormScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F3F4F6' },
-  content: { padding: 20, gap: 4 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  errorText: {
+  conteudo: { padding: 20, gap: 4 },
+  erro: {
     color: '#B91C1C',
     backgroundColor: '#FEE2E2',
     padding: 10,
     borderRadius: 8,
     marginBottom: 8,
-    fontSize: 13,
   },
   label: { fontSize: 13, fontWeight: '700', color: '#374151', marginBottom: 6, marginTop: 14 },
   input: {
@@ -158,9 +130,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
-    color: '#1F2937',
   },
-  multiline: { height: 100 },
+  inputGrande: { height: 100 },
   statusGroup: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   statusBtn: {
     paddingVertical: 8,
@@ -170,16 +141,15 @@ const styles = StyleSheet.create({
     borderColor: '#D1D5DB',
     backgroundColor: '#fff',
   },
-  statusBtnActive: { borderColor: '#6C63FF', backgroundColor: '#EEF2FF' },
-  statusBtnText: { fontSize: 13, color: '#6B7280', fontWeight: '600' },
-  statusBtnTextActive: { color: '#6C63FF' },
-  submitBtn: {
+  statusBtnAtivo: { borderColor: '#6C63FF', backgroundColor: '#EEF2FF' },
+  statusBtnTexto: { fontSize: 13, color: '#6B7280', fontWeight: '600' },
+  statusBtnTextoAtivo: { color: '#6C63FF' },
+  btnSalvar: {
     marginTop: 28,
     backgroundColor: '#6C63FF',
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
   },
-  submitBtnDisabled: { backgroundColor: '#A5B4FC' },
-  submitBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  btnSalvarTexto: { color: '#fff', fontWeight: '700', fontSize: 16 },
 });

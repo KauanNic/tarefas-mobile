@@ -3,6 +3,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   RefreshControl,
   StyleSheet,
@@ -11,49 +12,42 @@ import {
   View,
 } from 'react-native';
 import TaskCard from '../src/components/TaskCard';
-import { taskService } from '../src/services/api';
+import { buscarTarefas, deletarTarefa } from '../src/services/api';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState(null);
+  const [tarefas, setTarefas] = useState([]);
+  const [carregando, setCarregando] = useState(true);
+  const [atualizando, setAtualizando] = useState(false);
 
-  async function fetchTasks() {
+  async function carregarTarefas() {
     try {
-      setError(null);
-      const data = await taskService.getAll();
-      setTasks(data);
-    } catch {
-      setError('Não foi possível carregar as tarefas.\nVerifique se o servidor está rodando.');
+      const data = await buscarTarefas();
+      setTarefas(data);
+    } catch (err) {
+      Alert.alert('Erro', 'Não foi possível carregar as tarefas. Verifique se o servidor está rodando.');
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      setCarregando(false);
+      setAtualizando(false);
     }
   }
 
   useFocusEffect(
     useCallback(() => {
-      setLoading(true);
-      fetchTasks();
+      carregarTarefas();
     }, [])
   );
 
   async function handleDelete(id) {
     try {
-      await taskService.remove(id);
-      setTasks((prev) => prev.filter((t) => t.id !== id));
-    } catch {
-      setError('Erro ao remover tarefa.');
+      await deletarTarefa(id);
+      setTarefas(tarefas.filter(t => t.id !== id));
+    } catch (err) {
+      Alert.alert('Erro', 'Não foi possível remover a tarefa.');
     }
   }
 
-  function handleEdit(task) {
-    router.push({ pathname: '/form', params: { id: task.id } });
-  }
-
-  if (loading) {
+  if (carregando) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#6C63FF" />
@@ -63,43 +57,34 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      {error && (
-        <View style={styles.errorBox}>
-          <Ionicons name="warning-outline" size={16} color="#B91C1C" />
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
-      )}
-
       <FlatList
-        data={tasks}
-        keyExtractor={(item) => String(item.id)}
+        data={tarefas}
+        keyExtractor={item => String(item.id)}
         renderItem={({ item }) => (
-          <TaskCard task={item} onEdit={handleEdit} onDelete={handleDelete} />
+          <TaskCard
+            task={item}
+            onEdit={task => router.push({ pathname: '/form', params: { id: task.id } })}
+            onDelete={handleDelete}
+          />
         )}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={styles.lista}
         refreshControl={
           <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => { setRefreshing(true); fetchTasks(); }}
+            refreshing={atualizando}
+            onRefresh={() => { setAtualizando(true); carregarTarefas(); }}
             colors={['#6C63FF']}
           />
         }
         ListEmptyComponent={
-          !error && (
-            <View style={styles.empty}>
-              <Ionicons name="clipboard-outline" size={64} color="#D1D5DB" />
-              <Text style={styles.emptyText}>Nenhuma tarefa cadastrada</Text>
-              <Text style={styles.emptyHint}>Toque no botão + para adicionar</Text>
-            </View>
-          )
+          <View style={styles.vazio}>
+            <Ionicons name="clipboard-outline" size={64} color="#D1D5DB" />
+            <Text style={styles.vazioTexto}>Nenhuma tarefa cadastrada</Text>
+            <Text style={styles.vazioHint}>Toque no + para adicionar</Text>
+          </View>
         }
       />
 
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => router.push('/form')}
-        activeOpacity={0.85}
-      >
+      <TouchableOpacity style={styles.fab} onPress={() => router.push('/form')}>
         <Ionicons name="add" size={30} color="#fff" />
       </TouchableOpacity>
     </View>
@@ -109,20 +94,10 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F3F4F6' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  list: { padding: 16, paddingBottom: 100 },
-  errorBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    margin: 16,
-    padding: 12,
-    backgroundColor: '#FEE2E2',
-    borderRadius: 8,
-  },
-  errorText: { color: '#B91C1C', fontSize: 13, flex: 1 },
-  empty: { alignItems: 'center', marginTop: 80, gap: 8 },
-  emptyText: { fontSize: 16, color: '#9CA3AF', fontWeight: '600' },
-  emptyHint: { fontSize: 13, color: '#D1D5DB' },
+  lista: { padding: 16, paddingBottom: 100 },
+  vazio: { alignItems: 'center', marginTop: 80, gap: 8 },
+  vazioTexto: { fontSize: 16, color: '#9CA3AF', fontWeight: '600' },
+  vazioHint: { fontSize: 13, color: '#D1D5DB' },
   fab: {
     position: 'absolute',
     bottom: 28,
@@ -133,10 +108,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#6C63FF',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#6C63FF',
-    shadowOpacity: 0.45,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
     elevation: 8,
   },
 });
